@@ -37,7 +37,7 @@ export const FinancialReportScreen = ({navigation}) => {
   const getBanner = async () => {
     try {
       const response = await axiosInstance.get('/goods/banner');
-      console.log('get banner', response.data)
+      console.log('get banner', response.data);
       setBanner(response.data.banner);
     } catch (e) {
       console.log(e);
@@ -46,7 +46,7 @@ export const FinancialReportScreen = ({navigation}) => {
   const getBuyer = async () => {
     try {
       const response = await axiosInstance.get('/orders/buyer');
-      console.log('get buyer', response.data)
+      console.log('get buyer', response.data);
 
       const arr = response.data;
       if (Object.keys(arr).length) {
@@ -54,7 +54,7 @@ export const FinancialReportScreen = ({navigation}) => {
           if (!arr[i].status_id) {
             arr[i].status_id = {
               name: 'error',
-              title: 'Ошибка'
+              title: 'Ожидает подтверждения',
             };
           }
           if (arr[i].status_id?.name === 'approved') {
@@ -76,11 +76,11 @@ export const FinancialReportScreen = ({navigation}) => {
       }
       setData([...arr]);
     } catch (e) {
-      console.log("getBuyer111 ",e);
+      console.log('getBuyer111 ', e);
     }
   };
 
-  console.log("[DATA]:--- ", data)
+  console.log('[DATA]:--- ', data);
 
   return (
     <View

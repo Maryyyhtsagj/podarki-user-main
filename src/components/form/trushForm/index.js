@@ -51,16 +51,13 @@ export function TrushForm({
         }
       }
     } else {
-       if (count >= fullCount) {
-          Alert.alert('Превышено максимальное количество товара');
-        }
-        else {
-          const response = await axiosInstance.post('/carts/add', dat);
+      if (count >= fullCount) {
+        Alert.alert('Превышено максимальное количество товара');
+      } else {
+        const response = await axiosInstance.post('/carts/add', dat);
         setCount(`${+count + 1}`);
         setAllCount(allCount + price);
-     
-        }
-        
+      }
     }
   };
 

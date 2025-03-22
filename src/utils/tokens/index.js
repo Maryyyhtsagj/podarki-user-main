@@ -1,20 +1,21 @@
-import AsyncStorage from '@react-native-community/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export async function setTokens(newTokens) {
+export async function setTokens(accessToken) {
   try {
-    await AsyncStorage.setItem('accessToken', newTokens);
-    //await AsyncStorage.setItem('refreshToken', newTokens.refreshToken)
+    await AsyncStorage.setItem('accessToken', accessToken);
   } catch (error) {
-    console.log(error.message);
+    console.log('Error setting tokens:', error.message);
     throw error;
   }
 }
 
 export async function checkTokens() {
   try {
-    return await AsyncStorage.getItem('accessToken');
+    const token = await AsyncStorage.getItem('accessToken');
+    // console.log('Retrieved Token:', token);
+    return token;
   } catch (error) {
-    console.log(error.message);
+    console.log('Error checking tokens:', error.message);
     throw error;
   }
 }

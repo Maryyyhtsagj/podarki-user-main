@@ -263,11 +263,11 @@ export const AddScreen = ({navigation, route}) => {
             setPoints([...polylineRes]);
           })
           .catch(e => {
-            Alert.alert('', 'не найдено');
+            // Alert.alert('', 'не найдено');
           });
       })
       .catch(e => {
-        Alert.alert('', 'не найдено');
+        // Alert.alert('', 'не найдено');
       });
   };
 

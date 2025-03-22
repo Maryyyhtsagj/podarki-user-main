@@ -1,5 +1,5 @@
 import {useIsFocused} from '@react-navigation/native';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {useSelector} from 'react-redux';
 import {styles} from './styles';
 import {
@@ -30,57 +30,69 @@ export const ChatScreen = ({navigation}) => {
   const homeState = useSelector(state => state.homeState);
 
   const [active, setActive] = useState('Сегодня');
-  const [data, setData] = useState([]);
-  const [dataState, setDataState] = useState([]);
+  const [generalData, setGeneralData] = useState([]); // Store general chat data
+  const [adminData, setAdminData] = useState([]); // Store admin chat data
+  const [dataState, setDataState] = useState([]); // Filtered data for the active tab
   const isFocused = useIsFocused();
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
-      axiosFunc();
+      axiosFunc(); // Fetch general chat data
+      axiosAdminFunc(); // Fetch admin chat data
     }
-  }, [isFocused]);
+  }, [axiosFunc, axiosAdminFunc, isFocused]);
 
   useEffect(() => {
-    if (!!homeState.messagesCount) {
+    if (homeState.messagesCount) {
       axiosFunc();
+      axiosAdminFunc();
     }
   }, [homeState.messagesCount]);
 
-  const axiosFunc = async () => {
+  const axiosFunc = useCallback(async () => {
     try {
       const response = await axiosInstance.get('/chat/im');
-      //  console.log("CHATS", response.data);
-      const filterArr = response.data.filter(it => it.priority === 'admin');
-      setData(response.data);
-      changeStateFunc(active, response.data);
-      setLoading(false);
+      setGeneralData(response.data);
+      if (active === 'Сегодня' || active === 'Все') {
+        changeStateFunc(active, response.data);
+      }
     } catch (e) {
-      // console.log(e);
+      console.error('Error fetching general chat data:', e);
+    } finally {
       setLoading(false);
     }
-  };
-  const changeStateFunc = (st, dataFunc) => {
+  }, [active]);
+
+  const axiosAdminFunc = useCallback(async () => {
+    try {
+      const response = await axiosInstance.get('/chat/im/admin');
+      const filterArr = response.data.filter(it => it.priority === 'admin');
+      setAdminData(filterArr);
+      if (active === 'Тех.поддержка') {
+        changeStateFunc('Тех.поддержка', filterArr);
+      }
+    } catch (e) {
+      console.error('Error fetching admin chat data:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [active]);
+
+  const changeStateFunc = (tab, dataFunc) => {
     setLoading(true);
-    const arr = data;
 
-    if (st === 'Тех.поддержка') {
-      const filterArr = dataFunc.filter(it => it.priority === 'admin');
-      setDataState([...filterArr]);
-      setLoading(false);
-    } else if (st === 'Все') {
-      setDataState([...dataFunc]);
-      setLoading(false);
-    } else if (st === 'Сегодня') {
-      const filterArr = dataFunc.filter(it => {
-        return isToday(it.date);
-      });
-
-      setLoading(false);
+    if (tab === 'Тех.поддержка') {
+      setDataState([...adminData]); // Use admin data for support
+    } else if (tab === 'Все') {
+      setDataState([...generalData]); // Use all general chat data
+    } else if (tab === 'Сегодня') {
+      const filterArr = dataFunc.filter(it => isToday(it.date));
       setDataState([...filterArr]);
     }
-    setActive(st);
+    setActive(tab);
+    setLoading(false);
   };
 
   return (
@@ -113,7 +125,7 @@ export const ChatScreen = ({navigation}) => {
         <View style={[globalStyles.row, styles.headerFooter]}>
           <TouchableOpacity
             style={active === 'Сегодня' && styles.activeText}
-            onPress={() => changeStateFunc('Сегодня', data)}>
+            onPress={() => changeStateFunc('Сегодня', generalData)}>
             <Text
               style={[
                 globalStyles.titleText,
@@ -127,7 +139,7 @@ export const ChatScreen = ({navigation}) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={active === 'Все' && styles.activeText}
-            onPress={() => changeStateFunc('Все', data)}>
+            onPress={() => changeStateFunc('Все', generalData)}>
             <Text
               style={[
                 globalStyles.titleText,
@@ -141,7 +153,7 @@ export const ChatScreen = ({navigation}) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={active === 'Тех.поддержка' && styles.activeText}
-            onPress={() => changeStateFunc('Тех.поддержка', data)}>
+            onPress={() => changeStateFunc('Тех.поддержка', adminData)}>
             <Text
               style={[
                 globalStyles.titleText,

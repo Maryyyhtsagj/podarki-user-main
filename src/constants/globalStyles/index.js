@@ -17,7 +17,7 @@ export const globalStyles = StyleSheet.create({
   container: {
     backgroundColor: 'white',
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? globalWidth(10) : 0,
+    paddingTop: Platform.OS === 'ios' ? 40 : 0,
   },
   flexCenter: {
     flex: 1,

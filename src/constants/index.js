@@ -1,4 +1,4 @@
-    export * from './baseUrl';
+export * from './baseUrl';
 export * from './colors';
 export * from './screensName';
 export * from './actionsType';

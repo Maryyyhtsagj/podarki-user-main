@@ -15,7 +15,12 @@ import {
   AppInput,
   ChooseImage,
 } from '../../../../components';
-import {globalStyles, BaseUrl, imageUrl} from '../../../../constants';
+import {
+  globalStyles,
+  BaseUrl,
+  imageUrl,
+  MessagesName,
+} from '../../../../constants';
 import sendIcon from '../../../../assets/images/sendIcon.png';
 import ChatPlus from '../../../../assets/images/ChatPlus.png';
 import {checkTokens} from '../../../../utils';
@@ -41,16 +46,19 @@ export const MessagesScreen = ({navigation, route}) => {
   const [activeImage, setActiveImage] = useState({});
   const [token, setToken] = useState('');
   const user = route.params?.item;
+  const item = route.params.item;
   const state = route.params?.state;
   const [textWidth, setTextWidth] = useState(0);
-  const sellerId = user?.seller_id?._id || user?.seller_id;
-
+  const sellerId = user.seller_id._id || user.seller_id;
+  const url2 = 'http://79.174.80.241:3001/api/chat/admin';
   const url1 = 'http://79.174.80.241:3001/api/chat/user';
 
   useEffect(() => {
+    console.log('Chat component mounted');
     setTokFunc();
     socketConnectFunc();
     return () => {
+      console.log('Chat component unmounted, disconnecting socket');
       if (socketNew) {
         socketNew.disconnect();
       }
@@ -60,14 +68,43 @@ export const MessagesScreen = ({navigation, route}) => {
   const setTokFunc = async () => {
     setVisible(true);
     let token = await checkTokens();
+    console.log('Token retrieved:', token);
     setToken(token);
     socketConnectFunc(token);
   };
+  useEffect(() => {
+    const loadChatMessages = async () => {
+      try {
+        setVisible(true);
+        const token = await checkTokens();
+        setToken(token);
+
+        socketConnectFunc(token);
+        console.log('Fetching chat messages...');
+        socketNew.emit('getMessage');
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      } finally {
+        setVisible(false);
+      }
+    };
+
+    loadChatMessages();
+
+    return () => {
+      if (socketNew) {
+        socketNew.disconnect();
+      }
+    };
+  }, []);
+
   const socketConnectFunc = token => {
     if (socketNew) {
+      console.log('Disconnecting existing socket');
       socketNew.disconnect();
     }
 
+    console.log('Connecting to socket...');
     socketNew = io(url1, {
       query: {
         token: token,
@@ -76,20 +113,18 @@ export const MessagesScreen = ({navigation, route}) => {
         roomId: user.chatID,
       },
     });
+
     socketNew.on('connect', () => {
+      console.log('Socket connected');
       socketNew.emit('getMessage');
-      console.log('token', token);
-      // console.log('seller._id', sellerId);
-      // console.log('buyer_id', store._id);
-      // console.log('roomId', user.chatID);
-      // console.log('store', store);
-      // console.log('user', user);
     });
 
     getMessageFunc();
   };
+
   const getMessageFunc = () => {
     socketNew.on('messages', messages => {
+      console.log('Updated messages received:', messages);
       const arr = messages.messages;
       for (let i = 0; i < arr.length; i++) {
         if (arr[i].isImage) {
@@ -97,40 +132,47 @@ export const MessagesScreen = ({navigation, route}) => {
         }
       }
       setChat([...arr]);
-      setVisible(false);
-      setScrollToEnd(true);
-
-      const lastMessageId = arr[arr.length - 1]?._id;
-      socketNew.emit('isRead', {
-        message: lastMessageId,
-        userToken: token,
-        role: 'user',
-      });
-      // socketNew.on('messageRead', data => {
-      //   console.log(data, 'ЛОГАЮСООБЩЕНИЕ');
-      // });
     });
   };
 
   const requestCameraPermission = () => {
     try {
+      console.log('Requesting camera permission...');
       ChooseImage(async imageRes => {
         if (!imageRes.didCancel) {
+          console.log('Sending image:', imageRes.assets[0].base64);
           socketNew.emit(
             'send-img',
             `data:image/png;base64,${imageRes.assets[0].base64}`,
           );
         }
       });
-    } catch (err) {}
-  };
-  const handleEve = mess => {
-    if (addInput) {
-      socketNew.emit('sendMessage', {text: mess});
+    } catch (err) {
+      console.error('Error requesting camera permission:', err);
     }
   };
 
+  const handleEve = mess => {
+    if (addInput) {
+      const newMessage = {
+        _id: `${Date.now()}`,
+        text: mess,
+        isImage: false,
+        role: 'user',
+        isRead: false,
+        time: new Date().toLocaleTimeString(),
+        room_id: user.chatID,
+        date: new Date().toISOString(),
+      };
+      setChat(prev => [...prev, newMessage]);
+      socketNew.emit('sendMessage', {text: mess});
+      console.log('Message emitted:', newMessage);
+    }
+  };
+
+
   const ChatsFunc = () => {
+    console.log('Rendering chat messages:', chat);
     return chat.map((item, index) => {
       return (
         <View
@@ -228,8 +270,7 @@ export const MessagesScreen = ({navigation, route}) => {
   return (
     <View style={styles.chatScrool}>
       <BackButton
-        text={user?.seller_id?.legal_name || user?.legal_name || 'Unknown'}
-
+        text={user.seller_id.legal_name || user.legal_name}
         navigation={navigation}
         stylesBack={styles.backContainer}
       />

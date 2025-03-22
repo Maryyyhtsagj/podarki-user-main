@@ -78,7 +78,6 @@ export const MapsScreen = ({navigation}) => {
   const searchDataYandex = st => {
     let searchQuery = `${countryText} ${addressText}`.trim();
 
-
     axios
       .get(
         `https://geocode-maps.yandex.ru/1.x?apikey=274503c6-0ff8-4554-a8a2-7a5d21d3bdfc&geocode=${searchQuery}&format=json`,
@@ -96,9 +95,8 @@ export const MapsScreen = ({navigation}) => {
       .catch(e => {
         console.error('Ошибка API:', e?.response?.data || e?.message || e);
         setCountry([]);
-        Alert.alert('', `Ошибка: ${e?.message || 'не найдено'}`);
+        // Alert.alert('', `Ошибка: ${e?.message || 'не найдено'}`);
       });
-
   };
 
   const autocomplete = (data, st) => {
@@ -231,7 +229,7 @@ export const MapsScreen = ({navigation}) => {
                   setCountryText('');
                 }}
               />
-              <View style={styles.back_button_View}></View>
+              <View style={styles.back_button_View} />
               <View style={styles.listContainer}>
                 {data.map((item, index) => {
                   return (
@@ -275,7 +273,7 @@ export const MapsScreen = ({navigation}) => {
                   setFlag1(false);
                 }}
               />
-              <View style={styles.back_button_View}></View>
+              <View style={styles.back_button_View} />
               {data1.map((item, index) => {
                 return (
                   <TouchableOpacity

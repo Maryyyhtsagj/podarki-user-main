@@ -167,7 +167,6 @@ export const HomeScreen = ({navigation, route}) => {
       dispatch({type: 'SET_GOODS', payload: response.data});
     } catch (e) {
       console.log(e);
-      console.log(e.response.data, 'errrrrrrr');
     }
   };
 
@@ -177,7 +176,6 @@ export const HomeScreen = ({navigation, route}) => {
       setCategoryData(response.data.categories);
     } catch (e) {
       console.log(e);
-      console.log(e.response.data);
     }
   };
 

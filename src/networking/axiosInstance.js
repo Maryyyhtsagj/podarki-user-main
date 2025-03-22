@@ -4,7 +4,7 @@ import {checkTokens} from '../utils';
 
 const axiosInstance = axios.create({
   baseURL: BaseUrl,
-  timeout: 10000,
+  timeout: 100000,
 });
 
 axiosInstance.interceptors.request.use(
