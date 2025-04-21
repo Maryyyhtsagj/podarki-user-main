@@ -77,7 +77,7 @@ export const styles = StyleSheet.create({
     marginBottom: globalHeight(7),
   },
   idText: {
-    marginVertical: globalHeight(25),
+    marginVertical: globalHeight(15),
   },
   btnCont: {
     backgroundColor: 'transparent',

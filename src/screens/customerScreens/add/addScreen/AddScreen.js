@@ -949,10 +949,10 @@ export const AddScreen = ({navigation, route}) => {
               is24hourSource={'locale'}
               mode={dateNum ? 'time' : 'date'}
               title={dateNum ? 'Выберите время' : 'Выберите дату'}
-              confirmText="OK" // Set your confirm button text here
-              cancelText="Отмена" // Set your cancel button text here
+              confirmText="OK"
+              cancelText="Отмена"
               format={'MMM'}
-              showIcon={false} // Disable the calendar icon
+              showIcon={false}
               minimumDate={dateNum ? null : new Date()}
               maximumDate={dateNum ? null : newDate}
               date={date}

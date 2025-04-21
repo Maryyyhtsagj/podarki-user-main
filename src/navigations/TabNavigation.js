@@ -59,6 +59,7 @@ export default function TabNavigation() {
     );
 
     socket.on('count', data => {
+      console.log('messCount', data);
       dispatch({type: SET_MESSAGES_COUNT, payload: data.count});
     });
 

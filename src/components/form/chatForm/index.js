@@ -2,18 +2,24 @@ import React from 'react';
 import {dateFormatter} from '../../../utils/dateFormatter';
 import {styles} from './styles';
 import {Text, TouchableOpacity, View} from 'react-native';
-import {globalStyles, MessagesName} from '../../../constants';
+import { globalStyles, MessagesName } from "../../../constants";
 
 export const ChatForm = ({item, navigation, index}) => {
+  const handleNavigation = () => {
+    navigation.navigate(MessagesName, {
+      item,
+      state: item.priority === 'admin' ? true : false,
+    });
+  };
+
+  const displayMessage = item.lastMessage
+    ? item.lastMessage.indexOf('/images') !== -1
+      ? 'Фото'
+      : item.lastMessage
+    : '';
+
   return (
-    <TouchableOpacity
-      style={styles.chatContainer}
-      onPress={() =>
-        navigation.navigate(MessagesName, {
-          item,
-          state: item.priority === 'admin' ? true : false,
-        })
-      }>
+    <TouchableOpacity style={styles.chatContainer} onPress={handleNavigation}>
       <Text
         style={[
           globalStyles.titleText,
@@ -32,7 +38,7 @@ export const ChatForm = ({item, navigation, index}) => {
           {marginRight: 30},
         ]}
         numberOfLines={1}>
-        {item.lastMessage.indexOf('/images') !== -1 ? 'Фото' : item.lastMessage}
+        {displayMessage}
       </Text>
       <View style={styles.timeContainer}>
         <Text

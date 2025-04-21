@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {
   Loading,
@@ -24,9 +25,7 @@ import {
 import sendIcon from '../../../../assets/images/sendIcon.png';
 import ChatPlus from '../../../../assets/images/ChatPlus.png';
 import {checkTokens} from '../../../../utils';
-
 import io from 'socket.io-client';
-
 import {useDispatch, useSelector} from 'react-redux';
 import ImageView from 'react-native-image-viewing';
 import axiosInstance from '../../../../networking/axiosInstance';
@@ -46,24 +45,26 @@ export const MessagesScreen = ({navigation, route}) => {
   const [activeImage, setActiveImage] = useState({});
   const [token, setToken] = useState('');
   const user = route.params?.item;
-  const item = route.params.item;
   const state = route.params?.state;
   const [textWidth, setTextWidth] = useState(0);
-  const sellerId = user.seller_id._id || user.seller_id;
-  const url2 = 'http://79.174.80.241:3001/api/chat/admin';
+  const sellerId = user?.seller_id?._id || user?.seller_id;
   const url1 = 'http://79.174.80.241:3001/api/chat/user';
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    console.log('Chat component mounted');
+    if (user && (user.admin || user.priority === 'buyer')) {
+      setIsAdmin(true);
+    }
+  }, [user]);
+
+  useEffect(() => {
     setTokFunc();
-    socketConnectFunc();
     return () => {
-      console.log('Chat component unmounted, disconnecting socket');
       if (socketNew) {
         socketNew.disconnect();
       }
     };
-  }, []);
+  }, [isAdmin]);
 
   const setTokFunc = async () => {
     setVisible(true);
@@ -71,32 +72,8 @@ export const MessagesScreen = ({navigation, route}) => {
     console.log('Token retrieved:', token);
     setToken(token);
     socketConnectFunc(token);
+    setVisible(false);
   };
-  useEffect(() => {
-    const loadChatMessages = async () => {
-      try {
-        setVisible(true);
-        const token = await checkTokens();
-        setToken(token);
-
-        socketConnectFunc(token);
-        console.log('Fetching chat messages...');
-        socketNew.emit('getMessage');
-      } catch (error) {
-        console.error('Error loading messages:', error);
-      } finally {
-        setVisible(false);
-      }
-    };
-
-    loadChatMessages();
-
-    return () => {
-      if (socketNew) {
-        socketNew.disconnect();
-      }
-    };
-  }, []);
 
   const socketConnectFunc = token => {
     if (socketNew) {
@@ -104,19 +81,36 @@ export const MessagesScreen = ({navigation, route}) => {
       socketNew.disconnect();
     }
 
-    console.log('Connecting to socket...');
+    console.log('Connecting to socket...', url1);
+
+    const socketQuery = {
+      token: token,
+      // buyer_id: store._id,
+      roomId: user.chatID,
+      admin: isAdmin,
+    };
+
+    if (!isAdmin && sellerId) {
+      socketQuery.seller_id = sellerId;
+    }
+
     socketNew = io(url1, {
-      query: {
-        token: token,
-        seller_id: sellerId,
-        buyer_id: store._id,
-        roomId: user.chatID,
-      },
+      query: socketQuery,
+      transports: ['websocket'],
+      forceNew: true,
     });
 
     socketNew.on('connect', () => {
       console.log('Socket connected');
       socketNew.emit('getMessage');
+    });
+
+    socketNew.on('connect_error', error => {
+      console.error('Socket connection error:', error);
+    });
+
+    socketNew.on('disconnect', reason => {
+      console.log('Socket disconnected:', reason);
     });
 
     getMessageFunc();
@@ -125,13 +119,17 @@ export const MessagesScreen = ({navigation, route}) => {
   const getMessageFunc = () => {
     socketNew.on('messages', messages => {
       console.log('Updated messages received:', messages);
-      const arr = messages.messages;
-      for (let i = 0; i < arr.length; i++) {
-        if (arr[i].isImage) {
-          arr[i].play = false;
+      if (messages && messages.messages) {
+        const arr = messages.messages;
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i].isImage) {
+            arr[i].play = false;
+          }
         }
+        setChat([...arr]);
+      } else {
+        console.warn('Received messages in unexpected format:', messages);
       }
-      setChat([...arr]);
     });
   };
 
@@ -150,6 +148,7 @@ export const MessagesScreen = ({navigation, route}) => {
     } catch (err) {
       console.error('Error requesting camera permission:', err);
     }
+    setScrollToEnd(true);
   };
 
   const handleEve = mess => {
@@ -163,17 +162,44 @@ export const MessagesScreen = ({navigation, route}) => {
         time: new Date().toLocaleTimeString(),
         room_id: user.chatID,
         date: new Date().toISOString(),
+        name: store.full_name,
       };
+
       setChat(prev => [...prev, newMessage]);
-      socketNew.emit('sendMessage', {text: mess});
+
+      socketNew.emit('sendMessage', {
+        text: mess,
+        admin: isAdmin,
+        name: store.full_name,
+        room_id: user.chatID,
+      });
       console.log('Message emitted:', newMessage);
+
+      if (isAdmin) {
+        socketNew.once('messages', messages => {
+          const saved = messages.messages.some(
+            msg => msg.text === mess && msg._id === newMessage._id,
+          );
+          if (!saved) {
+            Alert.alert(
+              'Ошибка',
+              'Сообщение не удалось сохранить в чате техподдержки',
+            );
+          }
+        });
+      }
+      setScrollToEnd(true);
+      setAddInput('');
     }
   };
-
 
   const ChatsFunc = () => {
     console.log('Rendering chat messages:', chat);
     return chat.map((item, index) => {
+      if (!item.isImage && (!item.text || item.text.trim() === '')) {
+        return null;
+      }
+
       return (
         <View
           style={[
@@ -257,7 +283,9 @@ export const MessagesScreen = ({navigation, route}) => {
                       color: 'black',
                     },
                   ]}>
-                  {item.time.slice(0, 5)}
+                  {item.time && item.time.length >= 5
+                    ? item.time.slice(0, 5)
+                    : item.time}
                 </Text>
               </View>
             )}
@@ -270,7 +298,11 @@ export const MessagesScreen = ({navigation, route}) => {
   return (
     <View style={styles.chatScrool}>
       <BackButton
-        text={user.seller_id.legal_name || user.legal_name}
+        text={
+          isAdmin
+            ? 'Техническая поддержка'
+            : user?.name || user?.legal_name || 'Чат'
+        }
         navigation={navigation}
         stylesBack={styles.backContainer}
       />

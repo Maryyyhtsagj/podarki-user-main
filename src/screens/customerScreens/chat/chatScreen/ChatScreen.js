@@ -9,9 +9,15 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
-import {Colors, globalStyles} from '../../../../constants';
-import {ChatData_, FinancialForm, globalHeight} from '../../../../components';
+import {Colors, globalStyles, MessagesName} from '../../../../constants';
+import {
+  ChatData_,
+  FinancialForm,
+  globalHeight,
+  Loading,
+} from '../../../../components';
 import {ChatForm} from '../../../../components/form/chatForm';
 import axiosInstance from '../../../../networking/axiosInstance';
 import {getStatusBarHeight} from 'react-native-status-bar-height';
@@ -30,51 +36,32 @@ export const ChatScreen = ({navigation}) => {
   const homeState = useSelector(state => state.homeState);
 
   const [active, setActive] = useState('Сегодня');
-  const [generalData, setGeneralData] = useState([]); // Store general chat data
-  const [adminData, setAdminData] = useState([]); // Store admin chat data
-  const [dataState, setDataState] = useState([]); // Filtered data for the active tab
+  const [generalData, setGeneralData] = useState([]);
+  const [dataState, setDataState] = useState([]);
   const isFocused = useIsFocused();
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
-      axiosFunc(); // Fetch general chat data
-      axiosAdminFunc(); // Fetch admin chat data
+      fetchChats();
     }
-  }, [axiosFunc, axiosAdminFunc, isFocused]);
+  }, [isFocused]);
 
   useEffect(() => {
     if (homeState.messagesCount) {
-      axiosFunc();
-      axiosAdminFunc();
+      fetchChats();
     }
   }, [homeState.messagesCount]);
 
-  const axiosFunc = useCallback(async () => {
+  const fetchChats = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await axiosInstance.get('/chat/im');
       setGeneralData(response.data);
-      if (active === 'Сегодня' || active === 'Все') {
-        changeStateFunc(active, response.data);
-      }
+      changeStateFunc(active, response.data);
     } catch (e) {
-      console.error('Error fetching general chat data:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, [active]);
-
-  const axiosAdminFunc = useCallback(async () => {
-    try {
-      const response = await axiosInstance.get('/chat/im/admin');
-      const filterArr = response.data.filter(it => it.priority === 'admin');
-      setAdminData(filterArr);
-      if (active === 'Тех.поддержка') {
-        changeStateFunc('Тех.поддержка', filterArr);
-      }
-    } catch (e) {
-      console.error('Error fetching admin chat data:', e);
+      console.error('Error fetching chats:', e);
     } finally {
       setLoading(false);
     }
@@ -82,17 +69,44 @@ export const ChatScreen = ({navigation}) => {
 
   const changeStateFunc = (tab, dataFunc) => {
     setLoading(true);
-
-    if (tab === 'Тех.поддержка') {
-      setDataState([...adminData]); // Use admin data for support
-    } else if (tab === 'Все') {
-      setDataState([...generalData]); // Use all general chat data
+    if (tab === 'Все') {
+      setDataState([...dataFunc]);
     } else if (tab === 'Сегодня') {
       const filterArr = dataFunc.filter(it => isToday(it.date));
       setDataState([...filterArr]);
     }
     setActive(tab);
     setLoading(false);
+  };
+
+  const createAdminChat = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get('/chat/is-created?admin=true');
+      if (response.data && response.data.chatID) {
+        const adminChatData = {
+          ...response.data,
+          admin: true,
+          name: 'Техническая поддержка',
+          lastMessage: '',
+          priority: 'user',
+        };
+        navigation.navigate(MessagesName, {
+          item: adminChatData,
+          state: false,
+        });
+      } else {
+        Alert.alert(
+          'Ошибка',
+          'Не удалось создать чат с технической поддержкой',
+        );
+      }
+    } catch (e) {
+      console.error('Error creating admin chat:', e);
+      Alert.alert('Ошибка', 'Не удалось создать чат с технической поддержкой');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -151,16 +165,13 @@ export const ChatScreen = ({navigation}) => {
               Все
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={active === 'Тех.поддержка' && styles.activeText}
-            onPress={() => changeStateFunc('Тех.поддержка', adminData)}>
+          <TouchableOpacity onPress={createAdminChat}>
             <Text
               style={[
                 globalStyles.titleText,
                 globalStyles.weightLight,
                 globalStyles.titleTextSmall,
                 styles.headerFooterText,
-                active === 'Тех.поддержка' && styles.activeTextContent,
               ]}>
               Тех.поддержка
             </Text>
@@ -173,6 +184,7 @@ export const ChatScreen = ({navigation}) => {
           return <ChatForm item={item} key={index} navigation={navigation} />;
         }}
       />
+      {loading && <Loading loading={loading} />}
     </View>
   );
 };

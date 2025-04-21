@@ -280,12 +280,10 @@ export const GoodsDataScreen = ({navigation, route}) => {
                       globalStyles.weightLight,
                       globalStyles.titleTextSmall,
                     ]}>
-                    Время готовнnnnости:{' '}
+                    Время готовности:{' '}
                     <Text style={styles.grayText}>{data.time_to_get_ready}</Text>
                   </Text>
                 )}
-
-
               </View>
               <View>
                 <Text
